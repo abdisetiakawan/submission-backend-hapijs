@@ -1,40 +1,40 @@
-const { Op } = require("sequelize");
-const Book = require("../../models/entities/Book");
+const books = require("../../books");
 
 const getBooksHandler = async (request, h) => {
   try {
     const { name, reading, finished } = request.query;
 
-    const queryOptions = {};
+    let filteredBooks = books;
 
     if (name) {
-      queryOptions.name = {
-        [Op.like]: `%${name}%`,
-      };
+      filteredBooks = filteredBooks.filter((book) =>
+        book.name.toLowerCase().includes(name.toLowerCase())
+      );
     }
 
     if (reading !== undefined) {
-      queryOptions.reading = reading === "1";
+      filteredBooks = filteredBooks.filter(
+        (book) => book.reading === (reading === "1")
+      );
     }
 
     if (finished !== undefined) {
-      queryOptions.finished = finished === "1";
+      filteredBooks = filteredBooks.filter(
+        (book) => book.finished === (finished === "1")
+      );
     }
 
-    const books = await Book.findAll({
-      attributes: ["id", "name", "publisher"],
-      where: queryOptions,
-    });
-
-    if (!Array.isArray(books)) {
-      throw new Error("Unexpected response format from database");
-    }
+    const bookList = filteredBooks.map((book) => ({
+      id: book.id,
+      name: book.name,
+      publisher: book.publisher,
+    }));
 
     return h
       .response({
         status: "success",
         data: {
-          books,
+          books: bookList,
         },
       })
       .code(200);

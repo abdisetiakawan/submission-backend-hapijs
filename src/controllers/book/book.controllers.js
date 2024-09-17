@@ -1,5 +1,5 @@
 const { nanoid } = require("nanoid");
-const Book = require("../../models/entities/Book");
+const books = require("../../books");
 
 const createBook = async (request, h) => {
   const {
@@ -37,101 +37,72 @@ const createBook = async (request, h) => {
   const updatedAt = insertedAt;
   const finished = readPage === pageCount;
 
-  try {
-    const book = await Book.create({
-      id,
-      name,
-      year,
-      author,
-      summary,
-      publisher,
-      pageCount,
-      readPage,
-      finished,
-      reading,
-      insertedAt,
-      updatedAt,
-    });
+  const newBook = {
+    id,
+    name,
+    year,
+    author,
+    summary,
+    publisher,
+    pageCount,
+    readPage,
+    finished,
+    reading,
+    insertedAt,
+    updatedAt,
+  };
 
-    return h
-      .response({
-        status: "success",
-        message: "Buku berhasil ditambahkan",
-        data: {
-          bookId: book.id,
-        },
-      })
-      .code(201);
-  } catch (error) {
-    console.error(error);
-    return h
-      .response({
-        status: "fail",
-        message: "Gagal menambahkan buku",
-      })
-      .code(500);
-  }
+  books.push(newBook);
+
+  return h
+    .response({
+      status: "success",
+      message: "Buku berhasil ditambahkan",
+      data: {
+        bookId: id,
+      },
+    })
+    .code(201);
 };
 
 const getBooks = async (request, h) => {
-  try {
-    const books = await Book.findAll({
-      attributes: ["id", "name", "publisher"],
-    });
+  const bookList = books.map((book) => ({
+    id: book.id,
+    name: book.name,
+    publisher: book.publisher,
+  }));
 
-    return h
-      .response({
-        status: "success",
-        data: {
-          books,
-        },
-      })
-      .code(200);
-  } catch (error) {
-    console.error(error);
-    return h
-      .response({
-        status: "fail",
-        message: "Gagal mendapatkan buku",
-      })
-      .code(500);
-  }
+  return h
+    .response({
+      status: "success",
+      data: {
+        books: bookList,
+      },
+    })
+    .code(200);
 };
 
 const getBookById = async (request, h) => {
   const { bookId } = request.params;
+  const book = books.find((b) => b.id === bookId);
 
-  try {
-    const book = await Book.findOne({
-      where: { id: bookId },
-    });
-
-    if (!book) {
-      return h
-        .response({
-          status: "fail",
-          message: "Buku tidak ditemukan",
-        })
-        .code(404);
-    }
-
-    return h
-      .response({
-        status: "success",
-        data: {
-          book,
-        },
-      })
-      .code(200);
-  } catch (error) {
-    console.error(error);
+  if (!book) {
     return h
       .response({
         status: "fail",
-        message: "Gagal mendapatkan buku",
+        message: "Buku tidak ditemukan",
       })
-      .code(500);
+      .code(404);
   }
+
+  return h
+    .response({
+      status: "success",
+      data: {
+        book,
+      },
+    })
+    .code(200);
 };
 
 const updateBook = async (request, h) => {
@@ -166,83 +137,61 @@ const updateBook = async (request, h) => {
       .code(400);
   }
 
-  try {
-    const [updated] = await Book.update(
-      {
-        name,
-        year,
-        author,
-        summary,
-        publisher,
-        pageCount,
-        readPage,
-        reading,
-        finished: readPage === pageCount,
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        where: { id: bookId },
-      }
-    );
+  const index = books.findIndex((book) => book.id === bookId);
 
-    if (updated === 0) {
-      return h
-        .response({
-          status: "fail",
-          message: "Gagal memperbarui buku. Id tidak ditemukan",
-        })
-        .code(404);
-    }
-
-    return h
-      .response({
-        status: "success",
-        message: "Buku berhasil diperbarui",
-      })
-      .code(200);
-  } catch (error) {
-    console.error(error);
+  if (index === -1) {
     return h
       .response({
         status: "fail",
-        message: "Gagal memperbarui buku",
+        message: "Gagal memperbarui buku. Id tidak ditemukan",
       })
-      .code(500);
+      .code(404);
   }
+
+  const updatedAt = new Date().toISOString();
+  books[index] = {
+    ...books[index],
+    name,
+    year,
+    author,
+    summary,
+    publisher,
+    pageCount,
+    readPage,
+    reading,
+    finished: readPage === pageCount,
+    updatedAt,
+  };
+
+  return h
+    .response({
+      status: "success",
+      message: "Buku berhasil diperbarui",
+    })
+    .code(200);
 };
 
 const deleteBook = async (request, h) => {
   const { bookId } = request.params;
+  const index = books.findIndex((book) => book.id === bookId);
 
-  try {
-    const deleted = await Book.destroy({
-      where: { id: bookId },
-    });
-
-    if (deleted === 0) {
-      return h
-        .response({
-          status: "fail",
-          message: "Buku gagal dihapus. Id tidak ditemukan",
-        })
-        .code(404);
-    }
-
-    return h
-      .response({
-        status: "success",
-        message: "Buku berhasil dihapus",
-      })
-      .code(200);
-  } catch (error) {
-    console.error(error);
+  if (index === -1) {
     return h
       .response({
         status: "fail",
-        message: "Gagal menghapus buku",
+        message: "Buku gagal dihapus. Id tidak ditemukan",
       })
-      .code(500);
+      .code(404);
   }
+
+  books.splice(index, 1);
+
+  return h
+    .response({
+      status: "success",
+      message: "Buku berhasil dihapus",
+    })
+    .code(200);
 };
 
 module.exports = {
