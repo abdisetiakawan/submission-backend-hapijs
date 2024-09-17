@@ -24,8 +24,10 @@ const init = async () => {
   console.log("Server running on %s", server.info.uri);
 };
 
+// eslint-disable-next-line no-undef
 process.on("unhandledRejection", (err) => {
   console.log(err);
+  // eslint-disable-next-line no-undef
   process.exit(1);
 });
 
